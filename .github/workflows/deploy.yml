@@ -70,8 +70,8 @@ jobs:
           IMAGE_TAG: ${{ github.event.inputs.image_tag }}
         run: |
           # fail early with a helpful message if the Dockerfile path is wrong
-          DOCKERFILE_PATH=./docker/Dockerfile
-          CONTEXT=./docker
+          DOCKERFILE_PATH=./Dockerfile
+          CONTEXT=.
           if [ ! -f "$DOCKERFILE_PATH" ]; then
             echo "Dockerfile not found at $DOCKERFILE_PATH"
             ls -la
