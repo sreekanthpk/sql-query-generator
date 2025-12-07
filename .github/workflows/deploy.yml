@@ -1,0 +1,89 @@
+name: Deploy to AWS (manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      aws_access_key_id:
+        description: 'AWS Access Key ID (will be entered when running the workflow)'
+        required: true
+      aws_secret_access_key:
+        description: 'AWS Secret Access Key (will be entered when running the workflow)'
+        required: true
+      aws_region:
+        description: 'AWS region'
+        required: true
+        default: 'us-east-1'
+      ecr_repository:
+        description: 'Full ECR repository URI (e.g. 123456789012.dkr.ecr.us-east-1.amazonaws.com/my-repo)'
+        required: true
+      image_tag:
+        description: 'Image tag to push (e.g. v1.0.0)'
+        required: true
+      ecs_cluster:
+        description: 'ECS cluster name'
+        required: true
+      ecs_service:
+        description: 'ECS service name'
+        required: true
+      task_definition_file:
+        description: 'Path to ECS task definition template in repo (e.g. ecs/taskdef.json)'
+        required: true
+        default: 'ecs/taskdef.json'
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Cache Maven local repository
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+
+      - name: Build with Maven
+        run: mvn -B -DskipTests package
+
+      - name: Configure AWS credentials (from workflow inputs)
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ github.event.inputs.aws_access_key_id }}
+          aws-secret-access-key: ${{ github.event.inputs.aws_secret_access_key }}
+          aws-region: ${{ github.event.inputs.aws_region }}
+
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build, tag and push Docker image to ECR
+        env:
+          ECR_REPOSITORY: ${{ github.event.inputs.ecr_repository }}
+          IMAGE_TAG: ${{ github.event.inputs.image_tag }}
+        run: |
+          docker build -t $ECR_REPOSITORY:$IMAGE_TAG .
+          docker push $ECR_REPOSITORY:$IMAGE_TAG
+
+      - name: Render ECS task definition (replace container image)
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        id: render
+        with:
+          task-definition: ${{ github.event.inputs.task_definition_file }}
+          container-name: my-container   # update to match container name in your task definition
+          image: ${{ github.event.inputs.ecr_repository }}:${{ github.event.inputs.image_tag }}
+
+      - name: Deploy to ECS
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+        with:
+          task-definition: ${{ steps.render.outputs.task-definition }}
+          service: ${{ github.event.inputs.ecs_service }}
+          cluster: ${{ github.event.inputs.ecs_cluster }}
+          wait-for-service-stability: true
