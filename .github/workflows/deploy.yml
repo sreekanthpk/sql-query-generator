@@ -65,11 +65,18 @@ jobs:
         env:
           ECR_REPOSITORY: ${{ github.event.inputs.ecr_repository }}
           AWS_REGION: ${{ github.event.inputs.aws_region }}
-        run: |       
-          REGISTRY=$(echo "$ECR_REPOSITORY" | cut -d'/' -f1)
+        run: |
+          # sanitize input: remove http(s):// if present and trim
+          REPO_RAW="${ECR_REPOSITORY//[[:space:]]/}"
+          REGISTRY=$(echo "$REPO_RAW" | sed -E 's#^https?://##' | cut -d'/' -f1)
           echo "Registry: $REGISTRY"
-          # get login password and login
-          aws ecr get-login-password --region "$AWS_REGION" | docker login --username AWS --password-stdin "$REGISTRY"
+
+          # verify AWS credentials are working
+          echo "AWS caller identity:"
+          aws sts get-caller-identity --region "$AWS_REGION" || { echo "aws sts failed - check credentials/permissions"; exit 1; }
+
+          # get login password and login (will fail on bad registry)
+          aws ecr get-login-password --region "$AWS_REGION" | docker login --username AWS --password-stdin "$REGISTRY" || { echo "docker login to $REGISTRY failed"; exit 1; }
       
 
       - name: Build, tag and push Docker image to ECR
