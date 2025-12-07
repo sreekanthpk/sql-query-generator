@@ -69,7 +69,15 @@ jobs:
           ECR_REPOSITORY: ${{ github.event.inputs.ecr_repository }}
           IMAGE_TAG: ${{ github.event.inputs.image_tag }}
         run: |
-          docker build -t $ECR_REPOSITORY:$IMAGE_TAG .
+          # fail early with a helpful message if the Dockerfile path is wrong
+          DOCKERFILE_PATH=./docker/Dockerfile
+          CONTEXT=./docker
+          if [ ! -f "$DOCKERFILE_PATH" ]; then
+            echo "Dockerfile not found at $DOCKERFILE_PATH"
+            ls -la
+            exit 1
+          fi
+          docker build -f "$DOCKERFILE_PATH" -t $ECR_REPOSITORY:$IMAGE_TAG "$CONTEXT"
           docker push $ECR_REPOSITORY:$IMAGE_TAG
 
       - name: Render ECS task definition (replace container image)
