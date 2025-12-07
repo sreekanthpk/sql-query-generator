@@ -61,8 +61,16 @@ jobs:
           aws-secret-access-key: ${{ github.event.inputs.aws_secret_access_key }}
           aws-region: ${{ github.event.inputs.aws_region }}
 
-      - name: Login to Amazon ECR
-        uses: aws-actions/amazon-ecr-login@v2
+      - name: Login to ECR (explicit)
+        env:
+          ECR_REPOSITORY: ${{ github.event.inputs.ecr_repository }}
+          AWS_REGION: ${{ github.event.inputs.aws_region }}
+        run: |       
+          REGISTRY=$(echo "$ECR_REPOSITORY" | cut -d'/' -f1)
+          echo "Registry: $REGISTRY"
+          # get login password and login
+          aws ecr get-login-password --region "$AWS_REGION" | docker login --username AWS --password-stdin "$REGISTRY"
+      
 
       - name: Build, tag and push Docker image to ECR
         env:
