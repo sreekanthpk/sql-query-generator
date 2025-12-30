@@ -107,6 +107,11 @@ jobs:
           container-name: mycontainer   # update to match container name in your task definition
           image: ${{ github.event.inputs.ecr_repository }}:${{ github.event.inputs.image_tag }}
 
+      - name: Debug Task Definition Content
+        run: |
+          echo "Printing rendered task definition file:"
+          cat ${{ steps.render.outputs.task-definition }}
+
       - name: Deploy to ECS
         uses: aws-actions/amazon-ecs-deploy-task-definition@v1
         with:
