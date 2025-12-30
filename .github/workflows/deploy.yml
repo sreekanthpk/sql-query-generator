@@ -104,7 +104,7 @@ jobs:
         id: render
         with:
           task-definition: ${{ github.event.inputs.task_definition_file }}
-          container-name: my-container   # update to match container name in your task definition
+          container-name: mycontainer   # update to match container name in your task definition
           image: ${{ github.event.inputs.ecr_repository }}:${{ github.event.inputs.image_tag }}
 
       - name: Deploy to ECS
