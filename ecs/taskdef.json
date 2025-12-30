@@ -7,7 +7,7 @@
   "executionRoleArn": "arn:aws:iam::<AWS_ACCOUNT_ID>:role/ecsTaskExecutionRole",
   "containerDefinitions": [
     {
-      "name": "my-container",
+      "name": "mycontainer",
       "image": "REPLACE_WITH_IMAGE",
       "essential": true,
       "portMappings": [
