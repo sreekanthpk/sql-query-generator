@@ -95,6 +95,10 @@ jobs:
           docker build -f "$DOCKERFILE_PATH" -t $ECR_REPOSITORY:$IMAGE_TAG "$CONTEXT"
           docker push $ECR_REPOSITORY:$IMAGE_TAG
 
+      - name: Fill in Account ID in Task Definition
+        run: |
+          sed -i "s/<AWS_ACCOUNT_ID>/${{ steps.account-id.outputs.id }}/g" ${{ github.event.inputs.task_definition_file }}
+
       - name: Render ECS task definition (replace container image)
         uses: aws-actions/amazon-ecs-render-task-definition@v1
         id: render
